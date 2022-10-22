@@ -12,7 +12,7 @@
       "program": "/home/eliza/计算机网络项目/build/Debug/outDebug",
       "MIMode": "gdb",
       "miDebuggerPath": "gdb",
-      "setupCommands": [
+      "setupCommands": [  
         {
           "description": "Enable pretty-printing for gdb",
           "text": "-enable-pretty-printing",
