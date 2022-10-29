@@ -8,6 +8,9 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <sys/time.h>
+#include <unistd.h>
+#include <stdlib.h>
+#include <stdio.h>
 
 #define BUFLEN 65535
 #define PORT 8200
@@ -76,7 +79,7 @@ void show_mac_addr(unsigned char m[6])
 // 发送帧
 int send_frame(unsigned char *frame_data, unsigned short len, int sockfd)
 {
-    int send_len= send(sockfd, (char *)frame_data, (int)len, 0);
+    int send_len = send(sockfd, (char *)frame_data, (int)len, 0);
     return send_len;
 }
 
@@ -85,14 +88,14 @@ int datalink_layer_send(unsigned char *buf, int len, int sockfd)
 {
     unsigned char FrameBuffer[DATALINK_DATA_MAXSIZE + 18];
     unsigned short FrameLength = make_frame(&DesMacAddr, &SrcMacAddr, 0x0800, buf, len, FrameBuffer);
-	printf("数据链路层一次封装成功,开始数据发送\n");
+    printf("数据链路层一次封装成功,开始数据发送\n");
     return send_frame(FrameBuffer, FrameLength, sockfd);
 }
 ///////////////////////数据链路层////////////////////////////////
 
 //////////////////////////网络层///////////////////////////////////
-#define DATA_MAXSIZE 1440 //字节
-#define DATA_MINSIZE 26   //字节
+#define DATA_MAXSIZE 1440 // 字节
+#define DATA_MINSIZE 26   // 字节
 
 typedef struct IP_Packet
 {
@@ -137,11 +140,11 @@ typedef struct IP_Packet
 
     // 26~1480 Byte
     unsigned char IPv4_Data[DATA_MAXSIZE];
-}IP_Packet;
+} IP_Packet;
 
 void PrintBinary(const int argc)
 {
-    for (int i = 15; i >= 0; i--) //高位到低位输出
+    for (int i = 15; i >= 0; i--) // 高位到低位输出
     {
         int a;
         a = 0x01 & argc >> i;
@@ -152,7 +155,7 @@ void PrintBinary(const int argc)
 unsigned short extendl_16bit(unsigned int bit_content, int bit_offset)
 {
     bit_content = bit_content << bit_offset;
-    unsigned short res = 0b0; //16 bit
+    unsigned short res = 0b0; // 16 bit
     res += bit_content;
     return res;
 }
@@ -160,7 +163,7 @@ unsigned short extendl_16bit(unsigned int bit_content, int bit_offset)
 unsigned short extendr_16bit(unsigned int bit_content, int bit_offset)
 {
     bit_content = bit_content >> bit_offset;
-    unsigned short res = 0b0; //16 bit
+    unsigned short res = 0b0; // 16 bit
     res += bit_content;
     return res;
 }
@@ -168,7 +171,7 @@ unsigned short extendr_16bit(unsigned int bit_content, int bit_offset)
 unsigned char extendl_8bit(unsigned int bit_content, int bit_offset)
 {
     bit_content = bit_content << bit_offset;
-    unsigned char res = 0b0; //16 bit
+    unsigned char res = 0b0; // 16 bit
     res += bit_content;
     return res;
 }
@@ -176,7 +179,7 @@ unsigned char extendl_8bit(unsigned int bit_content, int bit_offset)
 unsigned char extendr_8bit(unsigned int bit_content, int bit_offset)
 {
     bit_content = bit_content >> bit_offset;
-    unsigned char res = 0b0; //16 bit
+    unsigned char res = 0b0; // 16 bit
     res += bit_content;
     return res;
 }
@@ -212,62 +215,62 @@ unsigned char extendr_8bit(unsigned int bit_content, int bit_offset)
 // Make Ip packet
 unsigned int MakeIpPacket(unsigned int DF, unsigned int MF, unsigned int FragmentOffset, const IP_Packet ip_packet, unsigned char *buf, unsigned char *IPv4_Option, long IPv4_Option_Len, unsigned char *IPv4_Data, short IPv4_Data_Len)
 {
-    //第一个byte
-    unsigned char VersionAndIhl = extendl_8bit(ip_packet.IPv4_Version, 4) + extendl_8bit(ip_packet.IPv4_IHL, 0); //8 bit
+    // 第一个byte
+    unsigned char VersionAndIhl = extendl_8bit(ip_packet.IPv4_Version, 4) + extendl_8bit(ip_packet.IPv4_IHL, 0); // 8 bit
     memcpy(buf, &VersionAndIhl, sizeof(VersionAndIhl));
-    //第二个byte
-    unsigned char IPv4_TOS = extendl_8bit(ip_packet.IPv4_TOS, 0); //8 bit
-    memcpy(&buf[1], &IPv4_TOS, sizeof(IPv4_TOS));                 //1已经被占用
-    //第三四个byte
-    unsigned short IPv4_TotalLength = 5 + 40 + (short)IPv4_Data_Len; //ip_packet.IPv4_TotalLength;
-    memcpy(&buf[2], &IPv4_TotalLength, sizeof(IPv4_TotalLength));    //3已经被占用
-    //第五六个byte
+    // 第二个byte
+    unsigned char IPv4_TOS = extendl_8bit(ip_packet.IPv4_TOS, 0); // 8 bit
+    memcpy(&buf[1], &IPv4_TOS, sizeof(IPv4_TOS));                 // 1已经被占用
+    // 第三四个byte
+    unsigned short IPv4_TotalLength = 5 + 40 + (short)IPv4_Data_Len; // ip_packet.IPv4_TotalLength;
+    memcpy(&buf[2], &IPv4_TotalLength, sizeof(IPv4_TotalLength));    // 3已经被占用
+    // 第五六个byte
     unsigned short IPv4_Identification = ip_packet.IPv4_Identification;
-    memcpy(&buf[4], &IPv4_Identification, sizeof(IPv4_Identification)); //5已经被占用
-    //第7、8个byte
-    //unsigned short extendl_16bit(unsigned int bit_content, int bit_offset)
+    memcpy(&buf[4], &IPv4_Identification, sizeof(IPv4_Identification)); // 5已经被占用
+    // 第7、8个byte
+    // unsigned short extendl_16bit(unsigned int bit_content, int bit_offset)
     unsigned short NoFunc_DF_FragmentOffset = extendl_16bit(ip_packet.IPv4_NoFunc, 15) + extendl_16bit(DF, 14) + extendl_16bit(MF, 13) + extendl_16bit(FragmentOffset, 0);
-    memcpy(&buf[6], &NoFunc_DF_FragmentOffset, sizeof(NoFunc_DF_FragmentOffset)); //7已经被占用
-    //第9、10个byte
-    //unsigned short TimeTolive_Protocol=extendl_16bit(ip_packet.IPv4_TimeTolive,8)+extendl_16bit(ip_packet.IPv4_Protocol,0);
+    memcpy(&buf[6], &NoFunc_DF_FragmentOffset, sizeof(NoFunc_DF_FragmentOffset)); // 7已经被占用
+    // 第9、10个byte
+    // unsigned short TimeTolive_Protocol=extendl_16bit(ip_packet.IPv4_TimeTolive,8)+extendl_16bit(ip_packet.IPv4_Protocol,0);
     unsigned short TimeTolive_Protocol = extendl_16bit(ip_packet.IPv4_Protocol, 8) + extendl_16bit(ip_packet.IPv4_TimeTolive, 0);
-    memcpy(&buf[8], &TimeTolive_Protocol, sizeof(TimeTolive_Protocol)); //9已经被占用
-    //11 12
+    memcpy(&buf[8], &TimeTolive_Protocol, sizeof(TimeTolive_Protocol)); // 9已经被占用
+    // 11 12
     unsigned short HeaderCheckSum = ip_packet.IPv4_HeaderCheckSum;
-    memcpy(&buf[10], &HeaderCheckSum, sizeof(HeaderCheckSum)); //11已经被占用
-    //13 14 15 16
+    memcpy(&buf[10], &HeaderCheckSum, sizeof(HeaderCheckSum)); // 11已经被占用
+    // 13 14 15 16
     unsigned int SourceAddr = ip_packet.IPv4_SourceAddr;
-    memcpy(&buf[12], &SourceAddr, sizeof(SourceAddr)); //15已经被占用
-    //17 18 19 20
+    memcpy(&buf[12], &SourceAddr, sizeof(SourceAddr)); // 15已经被占用
+    // 17 18 19 20
     unsigned int DesAddr = ip_packet.IPv4_DesAddr;
-    memcpy(&buf[16], &DesAddr, sizeof(DesAddr)); //19已经被占用
+    memcpy(&buf[16], &DesAddr, sizeof(DesAddr)); // 19已经被占用
     // option
     memcpy(&buf[20], IPv4_Option, IPv4_Option_Len);
     // data
     memcpy(&buf[20 + IPv4_Option_Len], IPv4_Data, IPv4_Data_Len);
-    //返回字节数
+    // 返回字节数
     return 20 + IPv4_Option_Len + IPv4_Data_Len;
 }
-//datalink_layer_send(buf, IpPacketLen,fileOut);
-//将形成的UDP数据包发送给网络层处理
-// network_layer_send(udp_buffer,UdpPacketLen,fileOut);
+// datalink_layer_send(buf, IpPacketLen,fileOut);
+// 将形成的UDP数据包发送给网络层处理
+//  network_layer_send(udp_buffer,UdpPacketLen,fileOut);
 int network_layer_send(unsigned char *udp_packet, unsigned int udp_packet_len, int sockfd)
 {
-	//发送的数据的总长度
+    // 发送的数据的总长度
     int socket_send_len = 0;
-	//IP数据报的基本格式
-    struct IP_Packet ip_packet_info = {0b0100, 0b1111, 0b00000000,         //IPv4_Version,IPv4_IHL,IPv4_TOS
-                                       0b0000000000000000,                 //IPv4_TotalLength
-                                       0b0000000000000000,                 //IPv4_Identification
-                                       0b0, 0b0, 0b0, 0b0000000000000,     //IPv4_NoFunc,IPv4_DF,IPv4_MF,IPv4_FragmentOffset
-                                       0b01010101, 0b10101010,             //IPv4_TimeTolive,IPv4_Protocol
-                                       0b0000000000000000,                 //IPv4_HeaderCheckSum
-                                       0b11011010010001101111111101100001, //IPv4_SourceAddr //218.70.255.97
-                                       0b01110010001101110101111100001110, //IPv4_DesAddr //114.55.95.14
-                                       0b0,                                //IPv4_Option
-                                       0b0};                               //IPv4_Data
-    //开始分片
-    // Split the data
+    // IP数据报的基本格式
+    struct IP_Packet ip_packet_info = {0b0100, 0b1111, 0b00000000,         // IPv4_Version,IPv4_IHL,IPv4_TOS
+                                       0b0000000000000000,                 // IPv4_TotalLength
+                                       0b0000000000000000,                 // IPv4_Identification
+                                       0b0, 0b0, 0b0, 0b0000000000000,     // IPv4_NoFunc,IPv4_DF,IPv4_MF,IPv4_FragmentOffset
+                                       0b01010101, 0b10101010,             // IPv4_TimeTolive,IPv4_Protocol
+                                       0b0000000000000000,                 // IPv4_HeaderCheckSum
+                                       0b11011010010001101111111101100001, // IPv4_SourceAddr //218.70.255.97
+                                       0b01110010001101110101111100001110, // IPv4_DesAddr //114.55.95.14
+                                       0b0,                                // IPv4_Option
+                                       0b0};                               // IPv4_Data
+    // 开始分片
+    //  Split the data
     for (unsigned int j = 0; j <= udp_packet_len / 1440; j++)
     {
         // // 1 bit
@@ -279,46 +282,46 @@ int network_layer_send(unsigned char *udp_packet, unsigned int udp_packet_len, i
         // // 13 bit
         // unsigned int IPv4_FragmentOffset : 13;  //指明了每个分片相对于原始报文开头的偏移量，以8B为单位，即每个分片的长度必须是8B的整数倍。
 
-		//如果输入的数据总长度超过1440字节，即数据部分长度超过1420字节，则需要分片，分别生成IPv4数据报发送到数据链路层
+        // 如果输入的数据总长度超过1440字节，即数据部分长度超过1420字节，则需要分片，分别生成IPv4数据报发送到数据链路层
         if (j != udp_packet_len / 1440)
         {
-			printf("发送一个分片\n");
+            printf("发送一个分片\n");
             // 0~IPV4_DATA_MAXSIZE-1 ; IPV4_DATA_MAXSIZE~2*IPV4_DATA_MAXSIZE-1;
             // j*IPV4_DATA_MAXSIZE~((j+1)*IPV4_DATA_MAXSIZE-1)
             unsigned char udp_packet_splited[IPV4_DATA_MAXSIZE];
             for (int i = j * IPV4_DATA_MAXSIZE, l = 0; i < ((j + 1) * IPV4_DATA_MAXSIZE); i++, l++)
             {
-                //printf("i:%d\n" ,i);
+                // printf("i:%d\n" ,i);
                 udp_packet_splited[l] = udp_packet[i];
             }
-            unsigned char ipv4_buffer[IPV4_DATA_MAXSIZE + 60]; //存放udp数据包
+            unsigned char ipv4_buffer[IPV4_DATA_MAXSIZE + 60]; // 存放udp数据包
             unsigned int DF, MF, FragmentOffset;
             DF = 0;
             MF = 1;
             FragmentOffset = j;
-            //unsigned int MakeIpPacket(unsigned int DF,unsigned int MF,unsigned int FragmentOffset, const IP_Packet ip_packet, unsigned char *buf, unsigned char *IPv4_Option, long IPv4_Option_Len, unsigned char *IPv4_Data, short IPv4_Data_Len)
+            // unsigned int MakeIpPacket(unsigned int DF,unsigned int MF,unsigned int FragmentOffset, const IP_Packet ip_packet, unsigned char *buf, unsigned char *IPv4_Option, long IPv4_Option_Len, unsigned char *IPv4_Data, short IPv4_Data_Len)
             unsigned int IpPacketLen = MakeIpPacket(DF, MF, FragmentOffset, ip_packet_info, ipv4_buffer, ip_packet_info.IPv4_Option, 40, udp_packet_splited, 1440);
-			printf("网络层分片+封成功,开始一次数据链路层封装\n");
+            printf("网络层分片+封成功,开始一次数据链路层封装\n");
             socket_send_len += datalink_layer_send(ipv4_buffer, IpPacketLen, sockfd);
-			printf("分片数据发送成功：");
-			for(int ii = 0;ii < 1440;ii++)
-			{
+            printf("分片数据发送成功：");
+            for (int ii = 0; ii < 1440; ii++)
+            {
                 if ((ii >= 8 && FragmentOffset == 0) || (FragmentOffset > 0))
-				    printf("%c",udp_packet_splited[ii]);
-			}
-			printf("\n");
+                    printf("%c", udp_packet_splited[ii]);
+            }
+            printf("\n");
         }
-		//如果输入的数据总长度小于等于1440字节，即数据部分长度不超过1420字节，则不需要分片，直接生成IPv4数据报发送到数据链路层
+        // 如果输入的数据总长度小于等于1440字节，即数据部分长度不超过1420字节，则不需要分片，直接生成IPv4数据报发送到数据链路层
         else
         {
-			printf("发送最后一个分片\n");
+            printf("发送最后一个分片\n");
             int RestByte = udp_packet_len - (udp_packet_len / 1440) * IPV4_DATA_MAXSIZE;
             unsigned char udp_packet_splited[IPV4_DATA_MAXSIZE];
             for (int i = j * IPV4_DATA_MAXSIZE, l = 0; i < udp_packet_len; i++, l++)
             {
                 udp_packet_splited[l] = udp_packet[i];
             }
-            //以8B为单位，即每个分片的长度必须是8B的整数倍。
+            // 以8B为单位，即每个分片的长度必须是8B的整数倍。
             if (RestByte / 8 != 0)
             {
                 int ToFill = 8 - (RestByte - (RestByte / 8) * 8);
@@ -328,21 +331,20 @@ int network_layer_send(unsigned char *udp_packet, unsigned int udp_packet_len, i
                 }
                 RestByte += ToFill;
             }
-            unsigned char ipv4_buffer[IPV4_DATA_MAXSIZE + 60]; //存放udp数据包
+            unsigned char ipv4_buffer[IPV4_DATA_MAXSIZE + 60]; // 存放udp数据包
             int DF, MF, FragmentOffset;
             DF = 0;
             MF = 0;
             FragmentOffset = j;
             unsigned long IpPacketLen = MakeIpPacket(DF, MF, FragmentOffset, ip_packet_info, ipv4_buffer, ip_packet_info.IPv4_Option, 40, udp_packet_splited, RestByte);
-			printf("网络层分片+封成功,开始一次数据链路层封装\n");
+            printf("网络层分片+封成功,开始一次数据链路层封装\n");
             socket_send_len += datalink_layer_send(ipv4_buffer, IpPacketLen, sockfd);
-			printf("该信息的最后的分片数据发送成功：");
-			for(int ii = 0;ii < udp_packet_len % 1440;ii++)
-			{
+            printf("该信息的最后的分片数据发送成功：");
+            for (int ii = 0; ii < udp_packet_len % 1440; ii++)
+            {
                 if ((ii >= 8 && FragmentOffset == 0) || (FragmentOffset > 0))
-				    printf("%c",udp_packet_splited[ii]);
-			}
-
+                    printf("%c", udp_packet_splited[ii]);
+            }
         }
     }
     return socket_send_len;
@@ -375,26 +377,56 @@ unsigned long MakeUdpPacket(
     memcpy(buf, &UDP_SRC_PORT, sizeof(UDP_SRC_PORT));
     unsigned short UDP_DES_PORT = udp_packet.UDP_DES_PORT;
     memcpy(&buf[2], &UDP_DES_PORT, sizeof(UDP_DES_PORT));
-    unsigned short UDP_LEN = UDP_Data_Len + 8; //udp_packet.UDP_LEN;
+    unsigned short UDP_LEN = UDP_Data_Len + 8; // udp_packet.UDP_LEN;
     memcpy(&buf[4], &UDP_LEN, sizeof(UDP_LEN));
     unsigned short UDP_CHECK_SUM = udp_packet.UDP_CHECK_SUM;
     memcpy(&buf[6], &UDP_CHECK_SUM, sizeof(UDP_CHECK_SUM));
     memcpy(&buf[8], UDP_Data, UDP_Data_Len);
-    //返回字节数
+    // 返回字节数
     return 8 + UDP_Data_Len;
 }
 ///////////////////////////传输层////////////////////////////////
 
 /////////////////////////main//////////////////////////////////
 struct UDP_Packet udp_packet_info = {
-    0b0000000000000111, 0b1110000000000000, //UDP_SRC_PORT,UDP_DES_PORT
-    0b1111111111111111, 0b0000000000000000, //UDP_LEN,UDP_CHECK_SUM
-    0b0};                                   //UDP_Data
-
+    0b0000000000000111, 0b1110000000000000, // UDP_SRC_PORT,UDP_DES_PORT
+    0b1111111111111111, 0b0000000000000000, // UDP_LEN,UDP_CHECK_SUM
+    0b0};                                   // UDP_Data
 
 int main(int argc, char **argv)
 {
-	printf("欢迎您进入发送端\n");
+    printf("欢迎您进入发送端\n");
+    printf("自动获取接收端IP地址\n");
+    // 开始获取IP地址
+    system("ifconfig>ip.txt\n"); // 将ipconfig得到的数据记录到ip.txt中
+    FILE *file = fopen("ip.txt", "r");
+    char c;
+    char ip_get[100] = "";
+    int i = 0;
+    int num = 0;
+    int num_k = 0;
+    while ((c = fgetc(file)) != EOF)
+    {
+        if (c == 't')
+        {
+            i++;
+        }
+        if (i == 2) // 第二个t之后
+        {
+            if (c == ' ')
+            {
+                num_k++;
+            }
+            if (num_k == 1 & c != ' ')
+            {
+                ip_get[num] = c;
+                num++;
+            }
+        }
+    }
+    printf("自动得到的接收端的IP地址是%s\n", ip_get);
+    fclose(file);
+    // 获取IP地址结束
     int sockfd;
     struct sockaddr_in s_addr;
     socklen_t len;
@@ -413,20 +445,20 @@ int main(int argc, char **argv)
     }
     else
         printf("--------------------------------------------\n");
-        printf("创建SOCKET成功\n");
+    printf("创建SOCKET成功\n");
 
     // 设置服务器ip
     memset(&s_addr, 0, sizeof(s_addr));
     s_addr.sin_family = AF_INET;
     s_addr.sin_port = htons(PORT);
-    if (inet_aton(argv[1], (struct in_addr *)&s_addr.sin_addr.s_addr) == 0)
+    if (inet_aton(ip_get, (struct in_addr *)&s_addr.sin_addr.s_addr) == 0)
     {
-        perror(argv[1]);
+        perror(ip_get);
         exit(errno);
     }
     else
     {
-        printf("接收端的IP地址成功设置为%s，端口成功设置为%d\n",argv[1],ntohs(s_addr.sin_port));
+        printf("接收端的IP地址成功设置为%s，端口成功设置为%d\n", ip_get, ntohs(s_addr.sin_port));
     }
     // 开始连接服务器
     if (connect(sockfd, (struct sockaddr *)&s_addr, sizeof(struct sockaddr)) == -1)
@@ -435,13 +467,13 @@ int main(int argc, char **argv)
         exit(errno);
     }
     else
-	{
-		printf("-------发送端成功连接接收端-------\n");
-		printf("***接受端的地址是：%s，端口是：%d***\n", inet_ntoa(s_addr.sin_addr), ntohs(s_addr.sin_port));
-		printf("您现在可与接收端进行通信...\n");
-		printf("--------------------------------------------\n");
-	}
-        
+    {
+        printf("-------发送端成功连接接收端-------\n");
+        printf("***接受端的地址是：%s，端口是：%d***\n", inet_ntoa(s_addr.sin_addr), ntohs(s_addr.sin_port));
+        printf("您现在可与接收端进行通信...\n");
+        printf("--------------------------------------------\n");
+    }
+
     while (1)
     {
         FD_ZERO(&rfds);
@@ -471,17 +503,17 @@ int main(int argc, char **argv)
                 bzero(buf, BUFLEN);
                 len = recv(sockfd, buf, BUFLEN, 0);
                 if (len > 0)
-				{
-					printf("Receiver说%s", buf);
-					printf("--------------------------------------------\n");
-				}
+                {
+                    printf("Receiver说%s", buf);
+                    printf("--------------------------------------------\n");
+                }
                 else
                 {
                     if (len < 0)
-					{
-						printf("接受消息失败！\n");
-						printf("--------------------------------------------\n");
-					}   
+                    {
+                        printf("接受消息失败！\n");
+                        printf("--------------------------------------------\n");
+                    }
                     else
                         printf("Receiver已退出\n");
                     break;
@@ -501,39 +533,39 @@ int main(int argc, char **argv)
                     break;
                 }
 
-				// //*数据链路层封装（已废弃）
+                // //*数据链路层封装（已废弃）
                 // //存放frame
                 // unsigned char FrameBuffer[DATALINK_DATA_MAXSIZE + 18];
                 // //形成frame，放入frame_data
                 // unsigned short FrameLength = make_frame(&DesMacAddr, &SrcMacAddr, 0x0800, buf, len, FrameBuffer);
                 // //将形成的frame发送给数据链路层处理
                 // //len = datalink_layer_send(FrameBuffer, FrameLength, sockfd);
-				// len=send_frame(FrameBuffer,FrameLength,sockfd);
+                // len=send_frame(FrameBuffer,FrameLength,sockfd);
 
-				//*网络层封装+数据链路层封装+发送 (已废弃)
-				// len = network_layer_send(buf, strlen(buf), sockfd);
+                //*网络层封装+数据链路层封装+发送 (已废弃)
+                // len = network_layer_send(buf, strlen(buf), sockfd);
 
-                //存放udp数据包
+                // 存放udp数据包
                 unsigned char UDP_Buffer[UDP_DATA_MAXSIZE + 8];
-                //形成udp数据包,放入UDP_Buffer
+                // 形成udp数据包,放入UDP_Buffer
                 unsigned int UdpPacketLen = MakeUdpPacket(udp_packet_info, UDP_Buffer, (int)strlen(buf), (unsigned char *)buf);
-                //将形成的UDP数据包发送给网络层处理
+                // 将形成的UDP数据包发送给网络层处理
                 len = network_layer_send(UDP_Buffer, UdpPacketLen, sockfd);
 
                 if (len > 0)
                 {
                     printf("=======>消息发送成功：%s", buf);
-					printf("--------------------------------------------\n");
+                    printf("--------------------------------------------\n");
                 }
                 else
                 {
                     printf("可恶，消息发送失败!\n");
-					printf("--------------------------------------------\n");
+                    printf("--------------------------------------------\n");
                     break;
                 }
             }
         }
-	}
+    }
     // 关闭连接
     close(sockfd);
     return 0;

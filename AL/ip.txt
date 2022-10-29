@@ -1,0 +1,27 @@
+docker0: flags=4099<UP,BROADCAST,MULTICAST>  mtu 1500
+        inet 172.17.0.1  netmask 255.255.0.0  broadcast 172.17.255.255
+        ether 02:42:00:ac:9e:8d  txqueuelen 0  (以太网)
+        RX packets 0  bytes 0 (0.0 B)
+        RX errors 0  dropped 0  overruns 0  frame 0
+        TX packets 0  bytes 0 (0.0 B)
+        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
+
+ens33: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1500
+        inet 192.168.45.53  netmask 255.255.255.0  broadcast 192.168.45.255
+        inet6 fe80::74fc:72c8:dacb:979e  prefixlen 64  scopeid 0x20<link>
+        ether 00:0c:29:fb:d4:a8  txqueuelen 1000  (以太网)
+        RX packets 148984  bytes 173368457 (173.3 MB)
+        RX errors 120  dropped 122  overruns 0  frame 0
+        TX packets 69460  bytes 12235222 (12.2 MB)
+        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
+        device interrupt 19  base 0x2000  
+
+lo: flags=73<UP,LOOPBACK,RUNNING>  mtu 65536
+        inet 127.0.0.1  netmask 255.0.0.0
+        inet6 ::1  prefixlen 128  scopeid 0x10<host>
+        loop  txqueuelen 1000  (本地环回)
+        RX packets 3979  bytes 620605 (620.6 KB)
+        RX errors 0  dropped 0  overruns 0  frame 0
+        TX packets 3979  bytes 620605 (620.6 KB)
+        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
+
