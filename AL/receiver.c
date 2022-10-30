@@ -123,6 +123,10 @@ void transfer_layer_receriver(unsigned char *UDP_DATA, int len, FILE *f, FILE *f
             fprintf(ff, "%c", UDP_Data[i]);
         }
     }
+    else
+    {
+        printf("数据正在来的路上，清稍等\n");
+    }
     // printf("\n");
     // fprintf(f, "\n");
     // fprintf(ff, "\n");

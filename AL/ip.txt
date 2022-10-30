@@ -10,9 +10,9 @@ ens33: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1500
         inet 192.168.45.53  netmask 255.255.255.0  broadcast 192.168.45.255
         inet6 fe80::74fc:72c8:dacb:979e  prefixlen 64  scopeid 0x20<link>
         ether 00:0c:29:fb:d4:a8  txqueuelen 1000  (以太网)
-        RX packets 185101  bytes 217734311 (217.7 MB)
+        RX packets 189571  bytes 219305655 (219.3 MB)
         RX errors 139  dropped 0  overruns 0  frame 0
-        TX packets 92076  bytes 20911026 (20.9 MB)
+        TX packets 95715  bytes 23666182 (23.6 MB)
         TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
         device interrupt 19  base 0x2000  
 
@@ -20,8 +20,8 @@ lo: flags=73<UP,LOOPBACK,RUNNING>  mtu 65536
         inet 127.0.0.1  netmask 255.0.0.0
         inet6 ::1  prefixlen 128  scopeid 0x10<host>
         loop  txqueuelen 1000  (本地环回)
-        RX packets 9537  bytes 1540779 (1.5 MB)
+        RX packets 9968  bytes 1610000 (1.6 MB)
         RX errors 0  dropped 0  overruns 0  frame 0
-        TX packets 9537  bytes 1540779 (1.5 MB)
+        TX packets 9968  bytes 1610000 (1.6 MB)
         TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
 
