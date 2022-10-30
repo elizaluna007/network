@@ -8,7 +8,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <sys/time.h>
-
+#include <time.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -21,13 +21,14 @@
 #define PORT 8200
 #define LISTNUM 200
 
-void PrintBinary(const int argc, int bit_begin, int bit_end)
+void PrintBinary(const int argc, int bit_begin, int bit_end, FILE *f)
 {
-    for (int i = bit_begin; i >= bit_end; i--) //高位到低位输出
+    for (int i = bit_begin; i >= bit_end; i--) // 高位到低位输出
     {
         int a;
         a = 0x01 & argc >> i;
-        printf("%d", a);
+        // printf("%d", a);
+        fprintf(f, "%d", a);
     }
 }
 int GetBinary(const unsigned int argc, int bit_begin, int bit_end)
@@ -37,8 +38,6 @@ int GetBinary(const unsigned int argc, int bit_begin, int bit_end)
     a = a >> (32 - bit_begin - 1 + bit_end);
     return a;
 }
-
-
 
 ////////////////////////////传输层////////////////////////////////////
 struct UDP_Packet
@@ -58,62 +57,81 @@ struct UDP_Packet
 unsigned char UDP_PACKET[UDP_DATA_MAXSIZE + 8];
 int UDP_LEN = 0;
 
-void transfer_layer_receriver(unsigned char *UDP_DATA, int len)
+void transfer_layer_receriver(unsigned char *UDP_DATA, int len, FILE *f, FILE *ff, int key)
 {
-    printf("UDP Combined Length: %d\n", UDP_LEN);
-    //UDP_SRC_PORT
+    // printf("UDP Combined Length: %d\n", UDP_LEN);
+    fprintf(f, "UDP Combined Length: %d\n", UDP_LEN);
+    // UDP_SRC_PORT
     unsigned short UDP_SRC_PORT;
     memcpy(&UDP_SRC_PORT, &UDP_DATA[0], 2);
-    printf("UDP_SRC_PORT: ");
-    PrintBinary((int)UDP_SRC_PORT, 15, 0);
-    printf("\n");
+    // printf("UDP_SRC_PORT: ");
+    fprintf(f, "UDP_SRC_PORT: ");
+    PrintBinary((int)UDP_SRC_PORT, 15, 0, f);
+    // printf("\n");
+    fprintf(f, "\n");
 
-    //UDP_DES_PORT
+    // UDP_DES_PORT
     unsigned short UDP_DES_PORT;
     memcpy(&UDP_DES_PORT, &UDP_DATA[2], 2);
-    printf("UDP_DES_PORT: ");
-    PrintBinary((int)UDP_DES_PORT, 15, 0);
-    printf("\n");
+    // printf("UDP_DES_PORT: ");
+    fprintf(f, "UDP_DES_PORT: ");
+    PrintBinary((int)UDP_DES_PORT, 15, 0, f);
+    // printf("\n");
+    fprintf(f, "\n");
 
-    //UDP_LEN
+    // UDP_LEN
     unsigned short UDP_LEN;
     memcpy(&UDP_LEN, &UDP_DATA[4], 2);
-    printf("UDP_LEN: ");
-    PrintBinary((int)UDP_LEN, 15, 0);
-    printf("\n");
+    // printf("UDP_LEN: ");
+    fprintf(f, "UDP_LEN: ");
+    PrintBinary((int)UDP_LEN, 15, 0, f);
+    // printf("\n");
+    fprintf(f, "\n");
 
-    //UDP_CHECK_SUM
+    // UDP_CHECK_SUM
     unsigned short UDP_CHECK_SUM;
     memcpy(&UDP_CHECK_SUM, &UDP_DATA[6], 2);
-    printf("UDP_CHECK_SUM: ");
-    PrintBinary((int)UDP_CHECK_SUM, 15, 0);
-    printf("\n");
+    // printf("UDP_CHECK_SUM: ");
+    fprintf(f, "UDP_CHECK_SUM: ");
+    PrintBinary((int)UDP_CHECK_SUM, 15, 0, f);
+    // printf("\n");
+    fprintf(f, "\n");
 
-    //UDP_Data
+    // UDP_Data
     int Data_Len = (int)UDP_LEN - 8;
     unsigned char UDP_Data[65535];
     memcpy(&UDP_Data, &UDP_DATA[8], Data_Len);
 
-    //暂时不打印UDP_Data
+    // 暂时不打印UDP_Data
+    //  printf("UDP_Data: ");
+    //  for (int i = 0; i < Data_Len; ++i)
+    //  {
+    //      PrintBinary((int)UDP_Data[i], 7, 0); // 16,17,18,19 byte
+    //  }
+    //  printf("\n");
     // printf("UDP_Data: ");
-    // for (int i = 0; i < Data_Len; ++i)
-    // {
-    //     PrintBinary((int)UDP_Data[i], 7, 0); // 16,17,18,19 byte
-    // }
-    // printf("\n");
-    printf("UDP_Data: ");
-    for (int i = 0; i < Data_Len; ++i)
+    if (key == 1)
     {
-        printf("%c", UDP_Data[i]);
+        fprintf(f, "UDP_Data: ");
+        printf("Sender说");
+        fprintf(ff, "Sender说");
+        for (int i = 0; i < Data_Len; ++i)
+        {
+            // printf("%c", UDP_Data[i]);
+            printf("%c", UDP_Data[i]);
+            fprintf(f, "%c", UDP_Data[i]);
+            fprintf(ff, "%c", UDP_Data[i]);
+        }
     }
-    printf("\n");
+    // printf("\n");
+    // fprintf(f, "\n");
+    // fprintf(ff, "\n");
 }
 ////////////////////////////传输层////////////////////////////////
 
-
 /////////////////////////网络层///////////////////////////////////
-#define DATA_MAXSIZE 1440 //字节
-#define DATA_MI NSIZE 26   //字节
+#define DATA_MAXSIZE 1440 // 字节
+#define DATA_MI NSIZE 26  // 字节
 struct IP_Packet
 {
     // 4 bit
@@ -191,158 +209,200 @@ struct IP_Packet
 //     return res;
 // }
 
-void network_layer_receriver(unsigned char *payload, int len)
+void network_layer_receriver(unsigned char *payload, int len, FILE *f, FILE *ff)
 {
-    //IPv4_Version
+    // IPv4_Version
     unsigned char IPv4_Version;
     memcpy(&IPv4_Version, &payload[0], 1);
-    printf("IPv4_Version: ");
-    PrintBinary((int)IPv4_Version, 7, 4);
-    printf("\n");
+    // printf("IPv4_Version: ");
+    fprintf(f, "IPv4_Version:");
+    PrintBinary((int)IPv4_Version, 7, 4, f);
+    // printf("\n");
+    fprintf(f, "\n");
 
-    //IPv4_IHL
+    // IPv4_IHL
     unsigned char IPv4_IHL;
     memcpy(&IPv4_IHL, &payload[0], 1);
-    printf("IPv4_IHL: ");
-    //PrintBinary((int)IPv4_Version,3,0); // 0 byte
-    PrintBinary((int)IPv4_Version, 7, 0); // 0 byte
-    printf("\n");
+    // printf("IPv4_IHL: ");
+    fprintf(f, "IPv4_IHL: ");
+    // PrintBinary((int)IPv4_Version,3,0); // 0 byte
+    PrintBinary((int)IPv4_Version, 7, 0, f); // 0 byte
+    // printf("\n");
+    fprintf(f, "\n");
     IPv4_IHL = IPv4_IHL << 4;
     IPv4_IHL = IPv4_IHL >> 4;
 
-    //IPv4_TOS
+    // IPv4_TOS
     unsigned char IPv4_TOS;
     memcpy(&IPv4_TOS, &payload[1], 1);
-    printf("IPv4_TOS: ");
-    PrintBinary((int)IPv4_TOS, 7, 0); // 1 byte
-    printf("\n");
+    // printf("IPv4_TOS: ");
+    fprintf(f, "IPv4_TOS: ");
+    PrintBinary((int)IPv4_TOS, 7, 0, f); // 1 byte
+    // printf("\n");
+    fprintf(f, "\n");
 
-    //IPv4_TotalLength
+    // IPv4_TotalLength
     unsigned short IPv4_TotalLength;
     memcpy(&IPv4_TotalLength, &payload[2], 2);
-    printf("IPv4_TotalLength: ");
-    PrintBinary((int)IPv4_TotalLength, 15, 0); // 2,3 byte
-    printf("\n");
+    // printf("IPv4_TotalLength: ");
+    fprintf(f, "IPv4_TotalLength: ");
+    PrintBinary((int)IPv4_TotalLength, 15, 0, f); // 2,3 byte
+    // printf("\n");
+    fprintf(f, "\n");
 
-    //IPv4_Identification
+    // IPv4_Identification
     unsigned short IPv4_Identification;
     memcpy(&IPv4_Identification, &payload[4], 2);
-    printf("IPv4_Identification: ");
-    PrintBinary((int)IPv4_Identification, 15, 0); // 4,5 byte
-    printf("\n");
+    // printf("IPv4_Identification: ");
+    fprintf(f, "IPv4_Identification: ");
+    PrintBinary((int)IPv4_Identification, 15, 0, f); // 4,5 byte
+    // printf("\n");
+    fprintf(f, "\n");
 
-    //IPv4_NoFunc
+    // IPv4_NoFunc
     unsigned short IPv4_NoFunc;
     memcpy(&IPv4_NoFunc, &payload[6], 2);
-    printf("IPv4_NoFunc: ");
-    PrintBinary((int)IPv4_NoFunc, 15, 15); // 6,7 byte
-    printf("\n");
+    // printf("IPv4_NoFunc: ");
+    fprintf(f, "IPv4_NoFunc: ");
+    PrintBinary((int)IPv4_NoFunc, 15, 15, f); // 6,7 byte
+    // printf("\n");
+    fprintf(f, "\n");
 
-    //IPv4_DF
+    // IPv4_DF
     unsigned short IPv4_DF;
     memcpy(&IPv4_DF, &payload[6], 2);
-    printf("IPv4_DF: ");
-    PrintBinary((int)IPv4_DF, 14, 14); // 6,7 byte
-    printf("\n");
+    // printf("IPv4_DF: ");
+    fprintf(f, "IPv4_DF: ");
+    PrintBinary((int)IPv4_DF, 14, 14, f); // 6,7 byte
+    // printf("\n");
+    fprintf(f, "\n");
 
-    //IPv4_MF
+    // IPv4_MF
     unsigned short IPv4_MF;
     memcpy(&IPv4_MF, &payload[6], 2);
-    printf("IPv4_MF: ");
-    PrintBinary((int)IPv4_MF, 13, 13); // 6,7 byte
-    printf("\n");
+    // printf("IPv4_MF: ");
+    fprintf(f, "IPv4_MF: ");
+    PrintBinary((int)IPv4_MF, 13, 13, f); // 6,7 byte
+    // printf("\n");
+    fprintf(f, "\n");
 
-    //IPv4_FragmentOffset
+    // IPv4_FragmentOffset
     unsigned short IPv4_FragmentOffset;
     memcpy(&IPv4_FragmentOffset, &payload[6], 2);
-    printf("IPv4_FragmentOffset: ");
-    PrintBinary((int)IPv4_FragmentOffset, 12, 0); // 6,7 byte
-    printf("\n");
+    // printf("IPv4_FragmentOffset: ");
+    fprintf(f, "IPv4_FragmentOffset: ");
+    fprintf(f, "IPv4_FragmentOffset: ");
+    PrintBinary((int)IPv4_FragmentOffset, 12, 0, f); // 6,7 byte
+    // printf("\n");
+    fprintf(f, "\n");
 
-    //IPv4_TimeTolive
+    // IPv4_TimeTolive
     unsigned char IPv4_TimeTolive;
     memcpy(&IPv4_TimeTolive, &payload[8], 1);
-    printf("IPv4_TimeTolive: ");
-    PrintBinary((int)IPv4_TimeTolive, 7, 0); // 8 byte
-    printf("\n");
+    // printf("IPv4_TimeTolive: ");
+    fprintf(f, "IPv4_TimeTolive: ");
+    PrintBinary((int)IPv4_TimeTolive, 7, 0, f); // 8 byte
+    // printf("\n");
+    fprintf(f, "\n");
 
-    //IPv4_Protocol
+    // IPv4_Protocol
     unsigned char IPv4_Protocol;
     memcpy(&IPv4_Protocol, &payload[9], 1);
-    printf("IPv4_Protocol: ");
-    PrintBinary((int)IPv4_Protocol, 7, 0); // 9 byte
-    printf("\n");
+    // printf("IPv4_Protocol: ");
+    fprintf(f, "IPv4_Protocol: ");
+    PrintBinary((int)IPv4_Protocol, 7, 0, f); // 9 byte
+    // printf("\n");
+    fprintf(f, "\n");
 
-    //IPv4_HeaderCheckSum
+    // IPv4_HeaderCheckSum
     unsigned short IPv4_HeaderCheckSum;
     memcpy(&IPv4_HeaderCheckSum, &payload[10], 2);
-    printf("IPv4_HeaderCheckSum: ");
-    PrintBinary((int)IPv4_HeaderCheckSum, 15, 0); // 10,11 byte
-    printf("\n");
+    // printf("IPv4_HeaderCheckSum: ");
+    fprintf(f, "IPv4_HeaderCheckSum: ");
+    PrintBinary((int)IPv4_HeaderCheckSum, 15, 0, f); // 10,11 byte
+    // printf("\n");
+    fprintf(f, "\n");
 
-    //IPv4_SourceAddr
+    // IPv4_SourceAddr
     unsigned int IPv4_SourceAddr;
     memcpy(&IPv4_SourceAddr, &payload[12], 4);
-    printf("IPv4_SourceAddr: ");
-    PrintBinary((int)IPv4_SourceAddr, 31, 0); // 12,13,14,15 byte
-    printf("\n");
+    // printf("IPv4_SourceAddr: ");
+    fprintf(f, "IPv4_SourceAddr: ");
+    PrintBinary((int)IPv4_SourceAddr, 31, 0, f); // 12,13,14,15 byte
+    // printf("\n");
+    fprintf(f, "\n");
 
-    //IPv4_DesAddr
+    // IPv4_DesAddr
     unsigned int IPv4_DesAddr;
     memcpy(&IPv4_DesAddr, &payload[16], 4);
-    printf("IPv4_DesAddr: ");
-    PrintBinary((int)IPv4_DesAddr, 31, 0); // 16,17,18,19 byte
-    printf("\n");
+    // printf("IPv4_DesAddr: ");
+    fprintf(f, "IPv4_DesAddr: ");
+    PrintBinary((int)IPv4_DesAddr, 31, 0, f); // 16,17,18,19 byte
+    // printf("\n");
+    fprintf(f, "\n");
 
-    //IPv4_Option
+    // IPv4_Option
     int Option_Len = (int)IPv4_IHL * 4 - 20;
-    unsigned char IPv4_Option[40]; //最多40个Byte
+    unsigned char IPv4_Option[40]; // 最多40个Byte
     memcpy(&IPv4_Option, &payload[20], Option_Len);
-    printf("IPv4_Option: ");
+    // printf("IPv4_Option: ");
+    fprintf(f, "IPv4_Option: ");
     for (int i = 0; i < Option_Len; ++i)
     {
-        PrintBinary((int)IPv4_Option[i], 7, 0); // 16,17,18,19 byte
+        PrintBinary((int)IPv4_Option[i], 7, 0, f); // 16,17,18,19 byte
     }
-    printf("\n");
+    // printf("\n");
+    fprintf(f, "\n");
 
-    //IPv4_Data
+    // IPv4_Data
     int Data_Len = (int)IPv4_TotalLength - (int)IPv4_IHL - 5;
-    unsigned char IPv4_Data[1500]; //最多40个Byte
+    unsigned char IPv4_Data[1500]; // 最多40个Byte
     memcpy(&IPv4_Data, &payload[20 + Option_Len], Data_Len);
 
-    //开始拼接
+    // 开始拼接
     unsigned short DF, MF, FragmentOffset;
-    DF = GetBinary(IPv4_DF, 14, 14);// 决定能否被分片。=1允许分片；=0禁止分片
-    MF = GetBinary(IPv4_MF, 13, 13);//用来告知目的主机该 IP数据报是否为原始数据报的最后一个片。=1还有；=0最后一个
-    FragmentOffset = GetBinary(IPv4_FragmentOffset, 12, 0);//它指出较长的分组在分片后，某片在原分组中的相对位置
-    printf("MF= %d\n", MF);
-	////////////////////////////////////////////分别打印分片数据
-	if (MF == 1)
-    { //后面还有分片
+    DF = GetBinary(IPv4_DF, 14, 14);                        // 决定能否被分片。=1允许分片；=0禁止分片
+    MF = GetBinary(IPv4_MF, 13, 13);                        // 用来告知目的主机该 IP数据报是否为原始数据报的最后一个片。=1还有；=0最后一个
+    FragmentOffset = GetBinary(IPv4_FragmentOffset, 12, 0); // 它指出较长的分组在分片后，某片在原分组中的相对位置
+    // printf("MF= %d\n", MF);
+    fprintf(f, "MF= %d\n", MF);
+    ////////////////////////////////////////////分别打印分片数据
+    if (MF == 1)
+    { // 后面还有分片
         UDP_LEN += IPV4_DATA_MAXSIZE;
-		printf("分片数据为：");
+        // printf("分片数据为：");
+        fprintf(f, "分片数据为：");
         for (int i = FragmentOffset * IPV4_DATA_MAXSIZE, l = 0; i < ((FragmentOffset + 1) * IPV4_DATA_MAXSIZE); i++, l++)
         {
             UDP_PACKET[i] = IPv4_Data[l];
             if (i >= 8 && FragmentOffset == 0 || FragmentOffset != 0)
-			    printf("%c",UDP_PACKET[i]);
+                // printf("%c", UDP_PACKET[i]);
+                fprintf(f, "%c", UDP_PACKET[i]);
         }
-		printf("\n");
+        // printf("\n");
+        fprintf(f, "\n");
+        fprintf(f, "网络层解封装结束，打包UDPpacket->运输层\n");
+        transfer_layer_receriver(UDP_PACKET, UDP_LEN, f, ff, 0);
     }
     else
-    { //最后一个分片
+    { // 最后一个分片
         UDP_LEN += Data_Len;
-		printf("最后一个分片数据为：");
+        // printf("最后一个分片数据为：");
+        fprintf(f, "最后一个分片数据为：");
         for (int i = FragmentOffset * IPV4_DATA_MAXSIZE, l = 0; i < (FragmentOffset * IPV4_DATA_MAXSIZE + Data_Len); i++, l++)
         {
             UDP_PACKET[i] = IPv4_Data[l];
-			if ((i < (FragmentOffset * IPV4_DATA_MAXSIZE + Data_Len)-26) && (i >= 8 && FragmentOffset == 0 || FragmentOffset != 0))
-				printf("%c",UDP_PACKET[i]);
+            if ((i < (FragmentOffset * IPV4_DATA_MAXSIZE + Data_Len) - 26) && (i >= 8 && FragmentOffset == 0 || FragmentOffset != 0))
+                // printf("%c", UDP_PACKET[i]);
+                fprintf(f, "%c", UDP_PACKET[i]);
         }
+        fprintf(f, "网络层解封装结束，打包UDPpacket->运输层\n");
+        transfer_layer_receriver(UDP_PACKET, UDP_LEN, f, ff, 1); // 标记已经成功
     }
     ////////////////////////////////////运输层传输
-    printf("网络层解封装结束，打包UDPpacket->运输层\n");
-    transfer_layer_receriver(UDP_PACKET, UDP_LEN);
+    // printf("网络层解封装结束，打包UDPpacket->运输层\n");
+    // fprintf(f, "网络层解封装结束，打包UDPpacket->运输层\n");
+    // transfer_layer_receriver(UDP_PACKET, UDP_LEN, f, ff, 0);
     ////////////////////////////////////////////////汇总打印，后期注释掉
     // printf("\n");
     // printf("<============================================>\n");
@@ -352,7 +412,7 @@ void network_layer_receriver(unsigned char *payload, int len)
     //     printf("%c", UDP_PACKET[ii]);
     // }
     // printf("\n");
-    // UDP_LEN=0;	
+    // UDP_LEN=0;
 }
 ////////////////////////网络层///////////////////////////////////
 
@@ -373,19 +433,22 @@ mac_addr my_mac = {0x3D, 0xE1, 0x2D, 0x6F, 0xE9, 0x34};
 unsigned char buffer[65536];
 
 // 打印MAC地址
-void show_mac_addr(unsigned char m[6])
+void show_mac_addr(unsigned char m[6], FILE *f)
 {
     for (int i = 0; i < 6; i++)
     {
-        printf("%02x", m[i]);
+        // printf("%02x", m[i]);
+        fprintf(f, "%02x", m[i]);
         if (i != 5)
-            printf(":");
+            // printf(":");
+            fprintf(f, ":");
     }
+    fprintf(f, "\n");
 }
 
 void Print_Binary(const char argc)
 {
-    for (int i = 7; i >= 0; i--) //高位到低位输出
+    for (int i = 7; i >= 0; i--) // 高位到低位输出
     {
         int a;
         a = 0x01 & argc >> i;
@@ -403,12 +466,14 @@ void show_payload(unsigned char *pl, long int len)
 }
 
 // 打印协议的类型
-void show_protocol(unsigned char m[2])
+void show_protocol(unsigned char m[2], FILE *f)
 {
     for (int i = 1; i >= 0; i--)
     {
-        printf("%02x", m[i]);
+        // printf("%02x", m[i]);
+        fprintf(f, "%02x", m[i]);
     }
+    fprintf(f, "\n");
 }
 
 // CRC校验
@@ -443,6 +508,13 @@ bool mac_same(unsigned char *dst_mac, unsigned char *my_mac, int mac_len)
 int main()
 {
     printf("欢迎您进入接收端\n");
+    time_t timep;
+    time(&timep);
+    FILE *file_write = fopen("record/receiver.txt", "a+");       // 日志
+    FILE *file_write_p2p = fopen("chatting/receiver.txt", "a+"); // 聊天记录
+    fprintf(file_write, "***当前时间为%s", ctime(&timep));
+    fprintf(file_write_p2p, "***当前时间为%s", ctime(&timep));
+
     int sockfd, newfd;
     struct sockaddr_in s_addr, c_addr;
     char buf[BUFLEN];
@@ -479,7 +551,7 @@ int main()
         printf("地址与端口绑定Socket成功(成功设置接收端的地址以及端口)\n");
         printf("***当前端的地址是：%s，端口是：%d***\n", inet_ntoa(s_addr.sin_addr), ntohs(s_addr.sin_port));
     }
-    //侦听本地端口
+    // 侦听本地端口
     if (listen(sockfd, listnum) == -1)
     {
         perror("listen");
@@ -547,11 +619,14 @@ int main()
                     if (len > 0)
                     {
                         printf("=======>消息发送成功：%s", buf);
+                        fputs("消息发送成功:", file_write_p2p);
+                        fputs(buf, file_write_p2p);
                         printf("--------------------------------------------\n");
                     }
                     else
                     {
                         printf("=======>消息发送失败!");
+                        fputs("信息发送失败\n", file_write_p2p);
                         printf("--------------------------------------------\n");
                         break;
                     }
@@ -565,16 +640,18 @@ int main()
                     len = recv(newfd, buf, BUFLEN, 0);
                     if (len > 0)
                     {
-                        printf("<===============================>\n");
-                        //仅供数据链路层测试，后期注释掉
-                        // printf("对方说：\n");
-                        // printf("%d", len);
-                        // printf("\n");
-                        // for (int ii = 0; ii < len; ii++)
-                        // {
-                        //     printf("%c", buf[ii]);
-                        // }
-                        // printf("\n");
+                        // printf("<===============================>\n");
+                        // fprintf(file_write_p2p, "Sender说");
+                        // printf("Sender说");
+                        // 仅供数据链路层测试，后期注释掉
+                        //  printf("对方说：\n");
+                        //  printf("%d", len);
+                        //  printf("\n");
+                        //  for (int ii = 0; ii < len; ii++)
+                        //  {
+                        //      printf("%c", buf[ii]);
+                        //  }
+                        //  printf("\n");
 
                         // CRC
                         unsigned int crc32_result = crc32((unsigned char *)buf, len - 4);
@@ -587,7 +664,8 @@ int main()
                                              crc32_result_c[0] == buf[len - 4];
                         if (!bool_crc_same)
                         {
-                            printf("CRC correct\n");
+                            // printf("CRC correct\n");
+                            fprintf(file_write, "CRC correct\n");
                             // exit(0);
                         }
                         // MAC
@@ -600,33 +678,37 @@ int main()
                             printf("MAC ERROR\n");
                             exit(0);
                         }
-                        printf("DA_MAC:\n");
-                        show_mac_addr(dst_mac);
-                        printf("\n");
+                        // printf("DA_MAC:\n");
+                        fprintf(file_write, "DA_MAC:");
+                        show_mac_addr(dst_mac, file_write);
+                        // printf("\n");
 
                         unsigned char src_mac[6];
                         memcpy(&src_mac, &buf[6], 6);
-                        printf("SA_MAC:\n");
-                        show_mac_addr(src_mac);
-                        printf("\n");
+                        // printf("SA_MAC:\n");
+                        fprintf(file_write, "SA_MAC:");
+                        show_mac_addr(src_mac, file_write);
+                        // printf("\n");
 
                         unsigned char protocol_type[2];
                         memcpy(&protocol_type, &buf[12], 2);
-                        printf("ProtocalType:\n");
-                        show_protocol(protocol_type);
-                        printf("\n");
+                        // printf("ProtocalType:\n");
+                        fprintf(file_write, "ProtocalType:");
+                        show_protocol(protocol_type, file_write);
+                        // printf("\n");
 
-						unsigned char payload[1500];
+                        unsigned char payload[1500];
                         memcpy(payload, &buf[14], len - 18);
-						printf("数据链路层解封装成功，开始网络层解封装\n");
-                        network_layer_receriver(payload, len - 18);
+                        // printf("数据链路层解封装成功，开始网络层解封装\n");
+                        fprintf(file_write, "数据链路层解封装成功，开始网络层解封装\n");
+                        network_layer_receriver(payload, len - 18, file_write, file_write_p2p);
 
                         // printf("Sender说：");
                         // for (int ii = 14; ii < len - 4; ii++)
                         // {
                         //     printf("%c", buf[ii]);
                         // }
-                        printf("<===============================>\n");
+                        printf("--------------------------------------------\n");
                     }
                     else
                     {
@@ -653,5 +735,7 @@ int main()
     }
     // 关闭服务器的Socket
     close(sockfd);
+    fclose(file_write_p2p);
+    fclose(file_write);
     return 0;
 }

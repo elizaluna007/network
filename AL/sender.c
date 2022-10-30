@@ -11,7 +11,7 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <stdio.h>
-
+#include <time.h>
 #define BUFLEN 65535
 #define PORT 8200
 
@@ -84,11 +84,12 @@ int send_frame(unsigned char *frame_data, unsigned short len, int sockfd)
 }
 
 // 数据链路层发送数据
-int datalink_layer_send(unsigned char *buf, int len, int sockfd)
+int datalink_layer_send(unsigned char *buf, int len, int sockfd, FILE *file)
 {
     unsigned char FrameBuffer[DATALINK_DATA_MAXSIZE + 18];
     unsigned short FrameLength = make_frame(&DesMacAddr, &SrcMacAddr, 0x0800, buf, len, FrameBuffer);
-    printf("数据链路层一次封装成功,开始数据发送\n");
+    // printf("数据链路层一次封装成功,开始数据发送\n");
+    fputs("数据链路层一次封装成功,开始数据发送\n", file);
     return send_frame(FrameBuffer, FrameLength, sockfd);
 }
 ///////////////////////数据链路层////////////////////////////////
@@ -254,7 +255,7 @@ unsigned int MakeIpPacket(unsigned int DF, unsigned int MF, unsigned int Fragmen
 // datalink_layer_send(buf, IpPacketLen,fileOut);
 // 将形成的UDP数据包发送给网络层处理
 //  network_layer_send(udp_buffer,UdpPacketLen,fileOut);
-int network_layer_send(unsigned char *udp_packet, unsigned int udp_packet_len, int sockfd)
+int network_layer_send(unsigned char *udp_packet, unsigned int udp_packet_len, int sockfd, FILE *f)
 {
     // 发送的数据的总长度
     int socket_send_len = 0;
@@ -285,7 +286,8 @@ int network_layer_send(unsigned char *udp_packet, unsigned int udp_packet_len, i
         // 如果输入的数据总长度超过1440字节，即数据部分长度超过1420字节，则需要分片，分别生成IPv4数据报发送到数据链路层
         if (j != udp_packet_len / 1440)
         {
-            printf("发送一个分片\n");
+            // printf("发送一个分片\n");
+            fputs("发送一个分片\n", f);
             // 0~IPV4_DATA_MAXSIZE-1 ; IPV4_DATA_MAXSIZE~2*IPV4_DATA_MAXSIZE-1;
             // j*IPV4_DATA_MAXSIZE~((j+1)*IPV4_DATA_MAXSIZE-1)
             unsigned char udp_packet_splited[IPV4_DATA_MAXSIZE];
@@ -301,20 +303,24 @@ int network_layer_send(unsigned char *udp_packet, unsigned int udp_packet_len, i
             FragmentOffset = j;
             // unsigned int MakeIpPacket(unsigned int DF,unsigned int MF,unsigned int FragmentOffset, const IP_Packet ip_packet, unsigned char *buf, unsigned char *IPv4_Option, long IPv4_Option_Len, unsigned char *IPv4_Data, short IPv4_Data_Len)
             unsigned int IpPacketLen = MakeIpPacket(DF, MF, FragmentOffset, ip_packet_info, ipv4_buffer, ip_packet_info.IPv4_Option, 40, udp_packet_splited, 1440);
-            printf("网络层分片+封成功,开始一次数据链路层封装\n");
-            socket_send_len += datalink_layer_send(ipv4_buffer, IpPacketLen, sockfd);
-            printf("分片数据发送成功：");
+            // printf("网络层分片+封成功,开始一次数据链路层封装\n");
+            fputs("网络层分片+封成功,开始一次数据链路层封装\n", f);
+            socket_send_len += datalink_layer_send(ipv4_buffer, IpPacketLen, sockfd, f);
+            // printf("分片数据发送成功：");
+            fputs("分片数据发送成功：", f);
             for (int ii = 0; ii < 1440; ii++)
             {
                 if ((ii >= 8 && FragmentOffset == 0) || (FragmentOffset > 0))
-                    printf("%c", udp_packet_splited[ii]);
+                    // printf("%c", udp_packet_splited[ii]);
+                    fprintf(f, "%c", udp_packet_splited[ii]);
             }
             printf("\n");
         }
         // 如果输入的数据总长度小于等于1440字节，即数据部分长度不超过1420字节，则不需要分片，直接生成IPv4数据报发送到数据链路层
         else
         {
-            printf("发送最后一个分片\n");
+            // printf("发送最后一个分片\n");
+            fputs("发送最后一个分片\n", f);
             int RestByte = udp_packet_len - (udp_packet_len / 1440) * IPV4_DATA_MAXSIZE;
             unsigned char udp_packet_splited[IPV4_DATA_MAXSIZE];
             for (int i = j * IPV4_DATA_MAXSIZE, l = 0; i < udp_packet_len; i++, l++)
@@ -337,13 +343,16 @@ int network_layer_send(unsigned char *udp_packet, unsigned int udp_packet_len, i
             MF = 0;
             FragmentOffset = j;
             unsigned long IpPacketLen = MakeIpPacket(DF, MF, FragmentOffset, ip_packet_info, ipv4_buffer, ip_packet_info.IPv4_Option, 40, udp_packet_splited, RestByte);
-            printf("网络层分片+封成功,开始一次数据链路层封装\n");
-            socket_send_len += datalink_layer_send(ipv4_buffer, IpPacketLen, sockfd);
-            printf("该信息的最后的分片数据发送成功：");
+            // printf("网络层分片+封成功,开始一次数据链路层封装\n");
+            fputs("网络层分片+封成功,开始一次数据链路层封装\n", f);
+            socket_send_len += datalink_layer_send(ipv4_buffer, IpPacketLen, sockfd, f);
+            // printf("该信息的最后的分片数据发送成功：");
+            fputs("该信息的最后的分片数据发送成功：", f);
             for (int ii = 0; ii < udp_packet_len % 1440; ii++)
             {
                 if ((ii >= 8 && FragmentOffset == 0) || (FragmentOffset > 0))
-                    printf("%c", udp_packet_splited[ii]);
+                    // printf("%c", udp_packet_splited[ii]);
+                    fprintf(f, "%c", udp_packet_splited[ii]);
             }
         }
     }
@@ -396,7 +405,22 @@ struct UDP_Packet udp_packet_info = {
 int main(int argc, char **argv)
 {
     printf("欢迎您进入发送端\n");
-    printf("自动获取接收端IP地址\n");
+    time_t timep;
+    time(&timep);
+    FILE *file_write = fopen("record/sender.txt", "a+");       // 日志
+    FILE *file_write_p2p = fopen("chatting/sender.txt", "a+"); // 聊天记录
+    // 表明聊天时间
+    //  printf("%d\n",p->tm_mday);/*获取当前月份日数,范围是1-31*/
+    //  printf("%d\n",1+p->tm_mon);/*获取当前月份,范围是0-11,所以要加1*/
+    //  int month;
+    //  int day;
+    //  month = 1 + p->tm_mon;
+    //  day = p->tm_mday;
+    fprintf(file_write, "***当前时间为%s", ctime(&timep));
+    fprintf(file_write_p2p, "***当前时间为%s", ctime(&timep));
+
+    fputs("自动获取接收端IP地址\n", file_write);
+    // printf("自动获取接收端IP地址\n");
     // 开始获取IP地址
     system("ifconfig>ip.txt\n"); // 将ipconfig得到的数据记录到ip.txt中
     FILE *file = fopen("ip.txt", "r");
@@ -425,6 +449,7 @@ int main(int argc, char **argv)
         }
     }
     printf("自动得到的接收端的IP地址是%s\n", ip_get);
+    fprintf(file_write, "自动得到的接收端的IP地址是%s\n", ip_get);
     fclose(file);
     // 获取IP地址结束
     int sockfd;
@@ -440,12 +465,14 @@ int main(int argc, char **argv)
     if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) == -1)
     {
         printf("创建SOCKET失败\n");
+        fputs("创建SOCKET失败\n", file_write);
         perror("socket");
         exit(errno);
     }
     else
         printf("--------------------------------------------\n");
-    printf("创建SOCKET成功\n");
+    // printf("创建SOCKET成功\n");
+    fputs("创建SOCKET成功\n", file_write);
 
     // 设置服务器ip
     memset(&s_addr, 0, sizeof(s_addr));
@@ -458,7 +485,11 @@ int main(int argc, char **argv)
     }
     else
     {
-        printf("接收端的IP地址成功设置为%s，端口成功设置为%d\n", ip_get, ntohs(s_addr.sin_port));
+        // printf("接收端的IP地址成功设置为%s，端口成功设置为%d\n", ip_get, ntohs(s_addr.sin_port));
+        fputs("接收端的IP地址成功设置为", file_write);
+        fputs(ip_get, file_write);
+        fputs("\n端口成功设置为", file_write);
+        // fputs(ntohs(s_addr.sin_port), file_write);
     }
     // 开始连接服务器
     if (connect(sockfd, (struct sockaddr *)&s_addr, sizeof(struct sockaddr)) == -1)
@@ -505,6 +536,7 @@ int main(int argc, char **argv)
                 if (len > 0)
                 {
                     printf("Receiver说%s", buf);
+                    fprintf(file_write_p2p, "信息接收成功：%s", buf);
                     printf("--------------------------------------------\n");
                 }
                 else
@@ -550,16 +582,20 @@ int main(int argc, char **argv)
                 // 形成udp数据包,放入UDP_Buffer
                 unsigned int UdpPacketLen = MakeUdpPacket(udp_packet_info, UDP_Buffer, (int)strlen(buf), (unsigned char *)buf);
                 // 将形成的UDP数据包发送给网络层处理
-                len = network_layer_send(UDP_Buffer, UdpPacketLen, sockfd);
+                len = network_layer_send(UDP_Buffer, UdpPacketLen, sockfd, file_write);
 
                 if (len > 0)
                 {
                     printf("=======>消息发送成功：%s", buf);
+                    fprintf(file_write_p2p, "信息发送成功： %s", buf);
+                    // fputs("信息发送成功：", file_write_p2p);
+                    // fputs(buf, file_write_p2p);
                     printf("--------------------------------------------\n");
                 }
                 else
                 {
                     printf("可恶，消息发送失败!\n");
+                    fputs("信息发送失败\n", file_write_p2p);
                     printf("--------------------------------------------\n");
                     break;
                 }
@@ -568,5 +604,7 @@ int main(int argc, char **argv)
     }
     // 关闭连接
     close(sockfd);
+    fclose(file_write_p2p);
+    fclose(file_write);
     return 0;
 }
